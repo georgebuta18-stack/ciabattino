@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Ciabattino by George Buta</title>
+<style>
+  :root{
+    --bg-deep:#150a2e;
+    --bg-mid:#2d1155;
+    --pink:#ff2e88;
+    --cyan:#00e5ff;
+    --orange:#ff8a3d;
+    --grid:#6c2bd9;
+    --white:#f5f0ff;
+  }
+  @font-face{
+    font-family:'Orbitron-fallback';
+    src:local('Arial');
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0; padding:0; height:100%; overflow:hidden;
+    background:var(--bg-deep);
+    font-family:'Trebuchet MS', 'Segoe UI', sans-serif;
+    touch-action:manipulation;
+    user-select:none;
+  }
+  #wrap{
+    position:relative;
+    width:100%; height:100dvh;
+    max-width:520px;
+    margin:0 auto;
+    overflow:hidden;
+  }
+  canvas{
+    display:block;
+    width:100%; height:100%;
+    background:linear-gradient(180deg, #1c0a3e 0%, #3d1268 35%, #7a1f6b 65%, #1a0a2e 100%);
+  }
+  .hud{
+    position:absolute; top:14px; left:0; right:0;
+    text-align:center;
+    font-family:'Arial Black', Impact, sans-serif;
+    font-size:38px;
+    color:var(--white);
+    text-shadow:0 0 12px var(--cyan), 0 0 24px rgba(0,229,255,0.5);
+    letter-spacing:2px;
+    pointer-events:none;
+    z-index:3;
+  }
+  .best{
+    position:absolute; top:58px; left:0; right:0;
+    text-align:center;
+    font-size:13px;
+    color:var(--pink);
+    text-shadow:0 0 8px rgba(255,46,136,0.6);
+    letter-spacing:3px;
+    text-transform:uppercase;
+    pointer-events:none;
+    z-index:3;
+  }
+  .overlay{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(21,10,46,0.72);
+    backdrop-filter:blur(2px);
+    z-index:10;
+    text-align:center;
+    padding:20px;
+  }
+  .hidden{display:none;}
+  .title-word{
+    font-family:'Arial Black', Impact, sans-serif;
+    font-size:52px;
+    letter-spacing:4px;
+    background:linear-gradient(180deg, var(--cyan), var(--pink));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    text-shadow:none;
+    filter:drop-shadow(0 0 18px rgba(255,46,136,0.5));
+    margin:0;
+  }
+  .subtitle{
+    color:var(--white);
+    opacity:0.75;
+    font-size:14px;
+    letter-spacing:2px;
+    margin:10px 0 34px;
+    text-transform:uppercase;
+  }
+  .author-credit{
+    color:var(--orange);
+    font-size:13px;
+    letter-spacing:3px;
+    text-transform:uppercase;
+    margin-top:8px;
+    opacity:0.9;
+  }
+  .btn{
+    font-family:'Arial Black', Impact, sans-serif;
+    font-size:18px;
+    letter-spacing:3px;
+    color:var(--bg-deep);
+    background:linear-gradient(90deg, var(--cyan), var(--pink));
+    border:none;
+    padding:16px 38px;
+    border-radius:40px;
+    box-shadow:0 0 24px rgba(255,46,136,0.45);
+    cursor:pointer;
+    text-transform:uppercase;
+  }
+  .btn:active{ transform:scale(0.96); }
+  .go-score{
+    font-family:'Arial Black', Impact, sans-serif;
+    font-size:64px;
+    color:var(--white);
+    text-shadow:0 0 16px var(--cyan);
+    margin:0 0 4px;
+  }
+  .go-label{
+    color:var(--orange);
+    letter-spacing:4px;
+    font-size:13px;
+    text-transform:uppercase;
+    margin-bottom:26px;
+  }
+  .go-best{
+    color:var(--pink);
+    font-size:14px;
+    letter-spacing:2px;
+    margin-bottom:30px;
+    text-transform:uppercase;
+  }
+  .hint{
+    position:absolute; bottom:22px; left:0; right:0;
+    text-align:center;
+    color:var(--white);
+    opacity:0.55;
+    font-size:12px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    z-index:3;
+    pointer-events:none;
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game"></canvas>
+
+  <div class="hud" id="hud">0</div>
+  <div class="best" id="bestHud">Record: 0</div>
+
+  <div class="overlay" id="startScreen">
+    <h1 class="title-word">CIABATTINO</h1>
+    <div class="author-credit">by George Buta</div>
+    <div class="subtitle">vola tra i neon</div>
+    <button class="btn" id="startBtn">Gioca</button>
+  </div>
+
+  <div class="overlay hidden" id="gameOverScreen">
+    <div class="go-label">Game Over</div>
+    <div class="go-score" id="finalScore">0</div>
+    <div class="go-best" id="bestScoreText">Record: 0</div>
+    <button class="btn" id="retryBtn">Riprova</button>
+  </div>
+
+  <div class="hint hidden" id="hint">tocca per volare</div>
+</div>
+
+<script>
+(function(){
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const wrap = document.getElementById('wrap');
+  const hud = document.getElementById('hud');
+  const bestHud = document.getElementById('bestHud');
+  const startScreen = document.getElementById('startScreen');
+  const gameOverScreen = document.getElementById('gameOverScreen');
+  const finalScoreEl = document.getElementById('finalScore');
+  const bestScoreText = document.getElementById('bestScoreText');
+  const hint = document.getElementById('hint');
+  const startBtn = document.getElementById('startBtn');
+  const retryBtn = document.getElementById('retryBtn');
+
+  let W, H, DPR;
+  function resize(){
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = wrap.clientWidth;
+    H = wrap.clientHeight;
+    canvas.width = W * DPR;
+    canvas.height = H * DPR;
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // ---- game state ----
+  let state = 'start'; // start | playing | dead
+  let bestScore = 0;
+  let score = 0;
+  let frame = 0;
+
+  const player = { x:0, y:0, r:20, vy:0, rot:0 };
+  const GRAVITY = 0.55;
+  const FLAP = -9.2;
+  let pipes = [];
+  const PIPE_GAP = 190;
+  const PIPE_W = 68;
+  let pipeTimer = 0;
+  let scrollSpeed = 3.1;
+
+  // stars / horizon
+  let stars = [];
+  function initStars(){
+    stars = [];
+    for(let i=0;i<50;i++){
+      stars.push({x:Math.random()*1, y:Math.random()*0.55, r:Math.random()*1.6+0.4, tw:Math.random()*Math.PI*2});
+    }
+  }
+  initStars();
+
+  function reset(){
+    player.x = W*0.28;
+    player.y = H*0.4;
+    player.vy = 0;
+    player.rot = 0;
+    pipes = [];
+    pipeTimer = 0;
+    score = 0;
+    frame = 0;
+    scrollSpeed = 3.1;
+    hud.textContent = '0';
+  }
+
+  function flap(){
+    if(state === 'playing'){
+      player.vy = FLAP;
+    }
+  }
+
+  function startGame(){
+    reset();
+    state = 'playing';
+    startScreen.classList.add('hidden');
+    gameOverScreen.classList.add('hidden');
+    hint.classList.remove('hidden');
+  }
+
+  function endGame(){
+    state = 'dead';
+    if(score > bestScore){ bestScore = score; }
+    finalScoreEl.textContent = score;
+    bestScoreText.textContent = 'Record: ' + bestScore;
+    bestHud.textContent = 'Record: ' + bestScore;
+    gameOverScreen.classList.remove('hidden');
+    hint.classList.add('hidden');
+  }
+
+  function spawnPipe(){
+    const margin = 60;
+    const gapCenter = margin + Math.random() * (H - margin*2 - 130) + 65;
+    pipes.push({
+      x: W + PIPE_W,
+      gapY: gapCenter,
+      passed: false,
+      hue: Math.random() < 0.5 ? 'cyan' : 'pink'
+    });
+  }
+
+  function update(){
+    frame++;
+    if(state !== 'playing') return;
+
+    player.vy += GRAVITY;
+    player.y += player.vy;
+    player.rot = Math.max(-0.5, Math.min(1.2, player.vy * 0.06));
+
+    if(player.y - player.r < 0){
+      player.y = player.r;
+      player.vy = 0;
+    }
+    if(player.y + player.r > H){
+      endGame();
+      return;
+    }
+
+    pipeTimer--;
+    if(pipeTimer <= 0){
+      spawnPipe();
+      pipeTimer = Math.floor(95 - Math.min(scrollSpeed*4, 25));
+    }
+
+    for(let i = pipes.length - 1; i >= 0; i--){
+      const p = pipes[i];
+      p.x -= scrollSpeed;
+
+      const topH = p.gapY - PIPE_GAP/2;
+      const botY = p.gapY + PIPE_GAP/2;
+
+      const px = player.x, py = player.y, pr = player.r * 0.82;
+      const hitX = px + pr > p.x && px - pr < p.x + PIPE_W;
+      if(hitX){
+        const hitTop = py - pr < topH;
+        const hitBot = py + pr > botY;
+        if(hitTop || hitBot){
+          endGame();
+          return;
+        }
+      }
+
+      if(!p.passed && p.x + PIPE_W < player.x){
+        p.passed = true;
+        score++;
+        hud.textContent = score;
+        scrollSpeed = Math.min(6.2, 3.1 + score * 0.045);
+      }
+
+      if(p.x < -PIPE_W - 5) pipes.splice(i,1);
+    }
+  }
+
+  function drawBackground(){
+    // sun
+    const sunX = W*0.5, sunY = H*0.32, sunR = Math.min(W,H)*0.24;
+    const grad = ctx.createLinearGradient(sunX, sunY-sunR, sunX, sunY+sunR);
+    grad.addColorStop(0, '#ffe66d');
+    grad.addColorStop(0.45, '#ff8a3d');
+    grad.addColorStop(1, '#ff2e88');
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, sunR, 0, Math.PI*2);
+    ctx.fillStyle = grad;
+    ctx.shadowColor = 'rgba(255,138,61,0.55)';
+    ctx.shadowBlur = 40;
+    ctx.fill();
+    // scanlines on sun
+    ctx.clip();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(21,10,46,0.85)';
+    for(let i=0;i<7;i++){
+      const y = sunY + sunR*0.15 + i*8;
+      ctx.fillRect(sunX-sunR, y, sunR*2, 3.5);
+    }
+    ctx.restore();
+
+    // stars
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    stars.forEach(s=>{
+      const alpha = 0.4 + 0.6*Math.abs(Math.sin(frame*0.02 + s.tw));
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      ctx.arc(s.x*W, s.y*H, s.r, 0, Math.PI*2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+
+    // horizon grid floor
+    const horizonY = H*0.72;
+    ctx.strokeStyle = 'rgba(108,43,217,0.55)';
+    ctx.lineWidth = 1;
+    // horizontal lines with perspective
+    for(let i=0;i<12;i++){
+      const t = i/12;
+      const y = horizonY + Math.pow(t,2.2) * (H - horizonY);
+      ctx.beginPath();
+      ctx.moveTo(0,y);
+      ctx.lineTo(W,y);
+      ctx.globalAlpha = 0.5 - t*0.3;
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    // vertical converging lines
+    const vanishX = W/2;
+    const offset = (frame*scrollSpeed*0.8) % 60;
+    for(let x=-600;x<600;x+=60){
+      const bx = x + offset;
+      ctx.beginPath();
+      ctx.moveTo(vanishX + bx*0.06, horizonY);
+      ctx.lineTo(vanishX + bx, H);
+      ctx.globalAlpha = 0.35;
+      ctx.strokeStyle = 'rgba(255,46,136,0.4)';
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawPipe(p){
+    const topH = p.gapY - PIPE_GAP/2;
+    const botY = p.gapY + PIPE_GAP/2;
+    const c1 = p.hue === 'cyan' ? '#00e5ff' : '#ff2e88';
+    const c2 = p.hue === 'cyan' ? '#0077a3' : '#a3164f';
+
+    function block(x,y,w,h){
+      const g = ctx.createLinearGradient(x,0,x+w,0);
+      g.addColorStop(0, c2);
+      g.addColorStop(0.5, c1);
+      g.addColorStop(1, c2);
+      ctx.fillStyle = g;
+      ctx.shadowColor = c1;
+      ctx.shadowBlur = 14;
+      ctx.fillRect(x,y,w,h);
+      ctx.shadowBlur = 0;
+      // segment lines (speaker-stack feel)
+      ctx.strokeStyle = 'rgba(21,10,46,0.5)';
+      ctx.lineWidth = 2;
+      const segs = Math.max(2, Math.floor(h/26));
+      for(let i=1;i<segs;i++){
+        const sy = y + (h/segs)*i;
+        ctx.beginPath();
+        ctx.moveTo(x+4, sy);
+        ctx.lineTo(x+w-4, sy);
+        ctx.stroke();
+      }
+    }
+    block(p.x, 0, PIPE_W, topH);
+    block(p.x, botY, PIPE_W, H - botY);
+  }
+
+  function drawPlayer(){
+    ctx.save();
+    ctx.translate(player.x, player.y);
+    ctx.rotate(player.rot);
+    const r = player.r;
+
+    // tail (behind body), wags based on vy
+    const tailWag = Math.sin(frame*0.25) * 0.3;
+    ctx.save();
+    ctx.strokeStyle = '#ff2e88';
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    ctx.shadowColor = '#ff2e88';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.moveTo(-r*0.7, r*0.3);
+    ctx.quadraticCurveTo(-r*1.6, r*0.1 + tailWag*8, -r*1.5, -r*0.6 + tailWag*10);
+    ctx.stroke();
+    ctx.restore();
+
+    // wings (behind body), flap based on time
+    const flap = Math.sin(frame*0.35) * 0.5 + 0.5; // 0..1
+    function wing(dir){
+      ctx.save();
+      ctx.translate(dir*r*0.55, -r*0.05);
+      const spread = 0.65 + flap*0.55;
+      ctx.rotate(dir * (0.35 - flap*0.55));
+      ctx.shadowColor = '#00e5ff';
+      ctx.shadowBlur = 14;
+      const wg = ctx.createLinearGradient(0,0, dir*r*1.7, -r*0.4);
+      wg.addColorStop(0, 'rgba(0,229,255,0.85)');
+      wg.addColorStop(1, 'rgba(255,46,136,0.35)');
+      ctx.fillStyle = wg;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(dir*r*0.9, -r*0.9*spread, dir*r*1.75*spread, -r*0.25);
+      ctx.quadraticCurveTo(dir*r*1.1, r*0.15, dir*r*0.35, r*0.35);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(245,240,255,0.5)';
+      ctx.lineWidth = 1;
+      for(let i=1;i<=3;i++){
+        ctx.beginPath();
+        ctx.moveTo(0,0);
+        ctx.lineTo(dir*r*1.5*spread*(i/3.4), -r*0.7*spread*(i/3.2));
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+    wing(-1); wing(1);
+
+    // ears
+    ctx.shadowColor = '#00e5ff';
+    ctx.shadowBlur = 16;
+    ctx.fillStyle = '#3d1268';
+    function ear(dir){
+      ctx.beginPath();
+      ctx.moveTo(dir*r*0.55, -r*0.65);
+      ctx.lineTo(dir*r*0.95, -r*1.35);
+      ctx.lineTo(dir*r*0.15, -r*0.95);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#00e5ff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+    ear(-1); ear(1);
+    // inner ears
+    ctx.fillStyle = '#ff8a3d';
+    ctx.shadowBlur = 0;
+    function innerEar(dir){
+      ctx.beginPath();
+      ctx.moveTo(dir*r*0.5, -r*0.72);
+      ctx.lineTo(dir*r*0.72, -r*1.08);
+      ctx.lineTo(dir*r*0.28, -r*0.88);
+      ctx.closePath();
+      ctx.fill();
+    }
+    innerEar(-1); innerEar(1);
+
+    // head (round body) - grey fur base
+    ctx.shadowColor = '#00e5ff';
+    ctx.shadowBlur = 20;
+    const g = ctx.createRadialGradient(-r*0.3,-r*0.3,2, 0,0, r);
+    g.addColorStop(0, '#9aa0ab');
+    g.addColorStop(0.7, '#5c6270');
+    g.addColorStop(1, '#33373f');
+    ctx.beginPath();
+    ctx.arc(0,0,r,0,Math.PI*2);
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#ff2e88';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // white patches
+    ctx.save();
+    ctx.clip(); // clip to head circle
+    ctx.restore();
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(0,0,r,0,Math.PI*2);
+    ctx.clip();
+    ctx.fillStyle = '#f2f2f0';
+    // muzzle/chin patch
+    ctx.beginPath();
+    ctx.ellipse(0, r*0.35, r*0.55, r*0.4, 0, 0, Math.PI*2);
+    ctx.fill();
+    // forehead blaze
+    ctx.beginPath();
+    ctx.ellipse(-r*0.1, -r*0.55, r*0.28, r*0.32, 0.2, 0, Math.PI*2);
+    ctx.fill();
+    // black patches
+    ctx.fillStyle = '#1c1e24';
+    ctx.beginPath();
+    ctx.ellipse(r*0.5, -r*0.4, r*0.35, r*0.3, -0.3, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(-r*0.55, r*0.05, r*0.22, r*0.28, 0.5, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+
+    // face stripes
+    ctx.strokeStyle = 'rgba(0,229,255,0.3)';
+    ctx.lineWidth = 1.5;
+    for(let i=-1;i<=1;i++){
+      ctx.beginPath();
+      ctx.moveTo(i*r*0.3 - r*0.05, -r*0.75);
+      ctx.lineTo(i*r*0.3 + r*0.05, -r*0.15);
+      ctx.stroke();
+    }
+
+    // futuristic visor glasses
+    ctx.save();
+    ctx.shadowColor = '#ff2e88';
+    ctx.shadowBlur = 12;
+    const visorG = ctx.createLinearGradient(-r*0.55,0, r*0.55,0);
+    visorG.addColorStop(0, 'rgba(0,229,255,0.9)');
+    visorG.addColorStop(0.5, 'rgba(255,46,136,0.75)');
+    visorG.addColorStop(1, 'rgba(0,229,255,0.9)');
+    ctx.fillStyle = visorG;
+    ctx.beginPath();
+    ctx.ellipse(-r*0.32, -r*0.05, r*0.19, r*0.15, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(r*0.32, -r*0.05, r*0.19, r*0.15, 0, 0, Math.PI*2);
+    ctx.fill();
+    // bridge
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = 'rgba(245,240,255,0.7)';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(-r*0.13, -r*0.05);
+    ctx.lineTo(r*0.13, -r*0.05);
+    ctx.stroke();
+    // lens rims
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(21,10,46,0.6)';
+    ctx.beginPath();
+    ctx.ellipse(-r*0.32, -r*0.05, r*0.19, r*0.15, 0, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(r*0.32, -r*0.05, r*0.19, r*0.15, 0, 0, Math.PI*2);
+    ctx.stroke();
+    // lens highlight glints
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.beginPath();
+    ctx.ellipse(-r*0.38, -r*0.1, r*0.045, r*0.06, -0.4, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(r*0.26, -r*0.1, r*0.045, r*0.06, -0.4, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+
+    // nose + mouth
+    ctx.fillStyle = '#ff8a3d';
+    ctx.beginPath();
+    ctx.moveTo(-r*0.08, r*0.2);
+    ctx.lineTo(r*0.08, r*0.2);
+    ctx.lineTo(0, r*0.32);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(245,240,255,0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(0, r*0.32);
+    ctx.quadraticCurveTo(-r*0.15, r*0.42, -r*0.3, r*0.34);
+    ctx.moveTo(0, r*0.32);
+    ctx.quadraticCurveTo(r*0.15, r*0.42, r*0.3, r*0.34);
+    ctx.stroke();
+
+    // whiskers
+    ctx.strokeStyle = 'rgba(245,240,255,0.5)';
+    ctx.lineWidth = 1;
+    [-1,1].forEach(dir=>{
+      for(let i=0;i<2;i++){
+        ctx.beginPath();
+        ctx.moveTo(dir*r*0.35, r*0.15 + i*r*0.08);
+        ctx.lineTo(dir*r*0.95, r*0.05 + i*r*0.16);
+        ctx.stroke();
+      }
+    });
+
+    ctx.restore();
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    drawBackground();
+    pipes.forEach(drawPipe);
+    drawPlayer();
+  }
+
+  function loop(){
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // input
+  function onTap(e){
+    if(e.type === 'touchstart') e.preventDefault();
+    if(state === 'playing') flap();
+  }
+  window.addEventListener('mousedown', onTap);
+  window.addEventListener('touchstart', onTap, {passive:false});
+  window.addEventListener('keydown', (e)=>{
+    if(e.code === 'Space'){ e.preventDefault(); if(state==='playing') flap(); }
+  });
+
+  startBtn.addEventListener('click', (e)=>{ e.stopPropagation(); startGame(); });
+  retryBtn.addEventListener('click', (e)=>{ e.stopPropagation(); startGame(); });
+
+  reset();
+  draw();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
