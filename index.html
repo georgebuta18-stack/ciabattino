@@ -69,7 +69,7 @@
     text-align:center;
     padding:20px;
   }
-  .hidden{display:none;}
+  .hidden{display:none !important;}
   .title-word{
     font-family:'Arial Black', Impact, sans-serif;
     font-size:52px;
@@ -110,6 +110,7 @@
     box-shadow:0 0 24px rgba(255,46,136,0.45);
     cursor:pointer;
     text-transform:uppercase;
+    touch-action: manipulation;
   }
   .btn:active{ transform:scale(0.96); }
   .go-score{
@@ -197,7 +198,6 @@
   window.addEventListener('resize', resize);
   resize();
 
-  // ---- game state ----
   let state = 'start'; // start | playing | dead
   let bestScore = 0;
   let score = 0;
@@ -212,7 +212,6 @@
   let pipeTimer = 0;
   let scrollSpeed = 3.1;
 
-  // stars / horizon
   let stars = [];
   function initStars(){
     stars = [];
@@ -323,7 +322,6 @@
   }
 
   function drawBackground(){
-    // sun
     const sunX = W*0.5, sunY = H*0.32, sunR = Math.min(W,H)*0.24;
     const grad = ctx.createLinearGradient(sunX, sunY-sunR, sunX, sunY+sunR);
     grad.addColorStop(0, '#ffe66d');
@@ -336,7 +334,6 @@
     ctx.shadowColor = 'rgba(255,138,61,0.55)';
     ctx.shadowBlur = 40;
     ctx.fill();
-    // scanlines on sun
     ctx.clip();
     ctx.shadowBlur = 0;
     ctx.fillStyle = 'rgba(21,10,46,0.85)';
@@ -346,7 +343,6 @@
     }
     ctx.restore();
 
-    // stars
     ctx.fillStyle = 'rgba(255,255,255,0.8)';
     stars.forEach(s=>{
       const alpha = 0.4 + 0.6*Math.abs(Math.sin(frame*0.02 + s.tw));
@@ -357,11 +353,9 @@
     });
     ctx.globalAlpha = 1;
 
-    // horizon grid floor
     const horizonY = H*0.72;
     ctx.strokeStyle = 'rgba(108,43,217,0.55)';
     ctx.lineWidth = 1;
-    // horizontal lines with perspective
     for(let i=0;i<12;i++){
       const t = i/12;
       const y = horizonY + Math.pow(t,2.2) * (H - horizonY);
@@ -372,7 +366,7 @@
       ctx.stroke();
     }
     ctx.globalAlpha = 1;
-    // vertical converging lines
+
     const vanishX = W/2;
     const offset = (frame*scrollSpeed*0.8) % 60;
     for(let x=-600;x<600;x+=60){
@@ -403,7 +397,6 @@
       ctx.shadowBlur = 14;
       ctx.fillRect(x,y,w,h);
       ctx.shadowBlur = 0;
-      // segment lines (speaker-stack feel)
       ctx.strokeStyle = 'rgba(21,10,46,0.5)';
       ctx.lineWidth = 2;
       const segs = Math.max(2, Math.floor(h/26));
@@ -425,7 +418,6 @@
     ctx.rotate(player.rot);
     const r = player.r;
 
-    // tail (behind body), wags based on vy
     const tailWag = Math.sin(frame*0.25) * 0.3;
     ctx.save();
     ctx.strokeStyle = '#ff2e88';
@@ -439,8 +431,7 @@
     ctx.stroke();
     ctx.restore();
 
-    // wings (behind body), flap based on time
-    const flap = Math.sin(frame*0.35) * 0.5 + 0.5; // 0..1
+    const flap = Math.sin(frame*0.35) * 0.5 + 0.5;
     function wing(dir){
       ctx.save();
       ctx.translate(dir*r*0.55, -r*0.05);
@@ -470,7 +461,6 @@
     }
     wing(-1); wing(1);
 
-    // ears
     ctx.shadowColor = '#00e5ff';
     ctx.shadowBlur = 16;
     ctx.fillStyle = '#3d1268';
@@ -486,7 +476,7 @@
       ctx.stroke();
     }
     ear(-1); ear(1);
-    // inner ears
+
     ctx.fillStyle = '#ff8a3d';
     ctx.shadowBlur = 0;
     function innerEar(dir){
@@ -499,7 +489,6 @@
     }
     innerEar(-1); innerEar(1);
 
-    // head (round body) - grey fur base
     ctx.shadowColor = '#00e5ff';
     ctx.shadowBlur = 20;
     const g = ctx.createRadialGradient(-r*0.3,-r*0.3,2, 0,0, r);
@@ -515,24 +504,23 @@
     ctx.lineWidth = 2.5;
     ctx.stroke();
 
-    // white patches
     ctx.save();
-    ctx.clip(); // clip to head circle
+    ctx.clip();
     ctx.restore();
     ctx.save();
     ctx.beginPath();
     ctx.arc(0,0,r,0,Math.PI*2);
     ctx.clip();
     ctx.fillStyle = '#f2f2f0';
-    // muzzle/chin patch
+
     ctx.beginPath();
     ctx.ellipse(0, r*0.35, r*0.55, r*0.4, 0, 0, Math.PI*2);
     ctx.fill();
-    // forehead blaze
+
     ctx.beginPath();
     ctx.ellipse(-r*0.1, -r*0.55, r*0.28, r*0.32, 0.2, 0, Math.PI*2);
     ctx.fill();
-    // black patches
+
     ctx.fillStyle = '#1c1e24';
     ctx.beginPath();
     ctx.ellipse(r*0.5, -r*0.4, r*0.35, r*0.3, -0.3, 0, Math.PI*2);
@@ -542,7 +530,6 @@
     ctx.fill();
     ctx.restore();
 
-    // face stripes
     ctx.strokeStyle = 'rgba(0,229,255,0.3)';
     ctx.lineWidth = 1.5;
     for(let i=-1;i<=1;i++){
@@ -552,7 +539,6 @@
       ctx.stroke();
     }
 
-    // futuristic visor glasses
     ctx.save();
     ctx.shadowColor = '#ff2e88';
     ctx.shadowBlur = 12;
@@ -567,7 +553,7 @@
     ctx.beginPath();
     ctx.ellipse(r*0.32, -r*0.05, r*0.19, r*0.15, 0, 0, Math.PI*2);
     ctx.fill();
-    // bridge
+
     ctx.shadowBlur = 0;
     ctx.strokeStyle = 'rgba(245,240,255,0.7)';
     ctx.lineWidth = 2.5;
@@ -575,7 +561,7 @@
     ctx.moveTo(-r*0.13, -r*0.05);
     ctx.lineTo(r*0.13, -r*0.05);
     ctx.stroke();
-    // lens rims
+
     ctx.lineWidth = 2;
     ctx.strokeStyle = 'rgba(21,10,46,0.6)';
     ctx.beginPath();
@@ -584,7 +570,7 @@
     ctx.beginPath();
     ctx.ellipse(r*0.32, -r*0.05, r*0.19, r*0.15, 0, 0, Math.PI*2);
     ctx.stroke();
-    // lens highlight glints
+
     ctx.fillStyle = 'rgba(255,255,255,0.85)';
     ctx.beginPath();
     ctx.ellipse(-r*0.38, -r*0.1, r*0.045, r*0.06, -0.4, 0, Math.PI*2);
@@ -594,7 +580,6 @@
     ctx.fill();
     ctx.restore();
 
-    // nose + mouth
     ctx.fillStyle = '#ff8a3d';
     ctx.beginPath();
     ctx.moveTo(-r*0.08, r*0.2);
@@ -611,7 +596,6 @@
     ctx.quadraticCurveTo(r*0.15, r*0.42, r*0.3, r*0.34);
     ctx.stroke();
 
-    // whiskers
     ctx.strokeStyle = 'rgba(245,240,255,0.5)';
     ctx.lineWidth = 1;
     [-1,1].forEach(dir=>{
@@ -639,19 +623,30 @@
     requestAnimationFrame(loop);
   }
 
-  // input
   function onTap(e){
-    if(e.type === 'touchstart') e.preventDefault();
-    if(state === 'playing') flap();
+    if(state === 'playing'){
+      if(e.type === 'touchstart') e.preventDefault();
+      flap();
+    }
   }
+
   window.addEventListener('mousedown', onTap);
   window.addEventListener('touchstart', onTap, {passive:false});
   window.addEventListener('keydown', (e)=>{
     if(e.code === 'Space'){ e.preventDefault(); if(state==='playing') flap(); }
   });
 
-  startBtn.addEventListener('click', (e)=>{ e.stopPropagation(); startGame(); });
-  retryBtn.addEventListener('click', (e)=>{ e.stopPropagation(); startGame(); });
+  function handleStart(e){
+    e.preventDefault();
+    e.stopPropagation();
+    startGame();
+  }
+
+  startBtn.addEventListener('click', handleStart);
+  startBtn.addEventListener('touchstart', handleStart, {passive:false});
+
+  retryBtn.addEventListener('click', handleStart);
+  retryBtn.addEventListener('touchstart', handleStart, {passive:false});
 
   reset();
   draw();
