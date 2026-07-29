@@ -202,6 +202,7 @@
   let bestScore = 0;
   let score = 0;
   let frame = 0;
+  let lastStartFrame = 0; // Protezione anti-doppio-tocco
 
   const player = { x:0, y:0, r:20, vy:0, rot:0 };
   const GRAVITY = 0.55;
@@ -243,6 +244,7 @@
   function startGame(){
     reset();
     state = 'playing';
+    lastStartFrame = frame;
     startScreen.classList.add('hidden');
     gameOverScreen.classList.add('hidden');
     hint.classList.remove('hidden');
@@ -625,13 +627,14 @@
 
   function onTap(e){
     if(state === 'playing'){
+      // Ignora tocchi avvenuti nei primi 10 frame dall'avvio per evitare che il tocco del pulsante "Gioca" valga come primo salto
+      if(frame - lastStartFrame < 10) return;
       if(e.type === 'touchstart') e.preventDefault();
       flap();
     }
   }
 
-  window.addEventListener('mousedown', onTap);
-  window.addEventListener('touchstart', onTap, {passive:false});
+  window.addEventListener('pointerdown', onTap);
   window.addEventListener('keydown', (e)=>{
     if(e.code === 'Space'){ e.preventDefault(); if(state==='playing') flap(); }
   });
@@ -639,14 +642,13 @@
   function handleStart(e){
     e.preventDefault();
     e.stopPropagation();
-    startGame();
+    if(state !== 'playing'){
+      startGame();
+    }
   }
 
-  startBtn.addEventListener('click', handleStart);
-  startBtn.addEventListener('touchstart', handleStart, {passive:false});
-
-  retryBtn.addEventListener('click', handleStart);
-  retryBtn.addEventListener('touchstart', handleStart, {passive:false});
+  startBtn.addEventListener('pointerdown', handleStart);
+  retryBtn.addEventListener('pointerdown', handleStart);
 
   reset();
   draw();
